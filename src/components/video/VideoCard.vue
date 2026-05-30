@@ -82,7 +82,7 @@
           </div>
           <!-- Duration/Current live stream time -->
           <div
-            v-if="data.duration > 0 || data.start_actual"
+            v-if="hasDuration"
             class="video-duration rounded-br-sm"
             :class="data.status === 'live' && 'video-duration-live'"
           >
@@ -92,7 +92,7 @@
         <div v-else-if="isPlaceholder" class="d-flex flex-column align-end">
           <!-- (👻✅) -->
           <div class="video-duration">
-            <span v-if="hasDuration" class="duration-placeholder">{{
+            <span v-if="placeholderHasDuration" class="duration-placeholder">{{
               formattedDuration
             }}</span>
             <span
@@ -475,6 +475,9 @@ export default {
             return "";
         },
         hasDuration() {
+            return this.data.duration > 0 || this.data.available_at;
+        },
+        placeholderHasDuration() {
             return (
                 (this.data.duration > 0 && this.data.status === "live")
                 || this.data.start_actual
@@ -487,9 +490,12 @@ export default {
             return this.title;
         },
         formattedDuration() {
-            if (this.data.start_actual && this.data.status === "live") {
+            // Some backend queries (namely search) never populate start_actual for status=live videos,
+            // so for consistency across all pages, instead use available_at=coalesce(start_actual, start_scheduled, published_at).
+            // Note: this results in start_scheduled being used for status=live videos that haven't actually started.
+            if (this.data.available_at && this.data.status === "live") {
                 return this.formatDuration(
-                    dayjs(this.now).diff(dayjs(this.data.start_actual)),
+                    dayjs(this.now).diff(dayjs(this.data.available_at)),
                 );
             }
             if (this.data.status === "upcoming" && this.data.duration) {
